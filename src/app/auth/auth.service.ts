@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { of, Observable, switchMap } from 'rxjs';
+import { of, Observable, switchMap, catchError } from 'rxjs';
 import { UsersService } from '../users/services/users.service';
 import { HttpClient, HttpHeaders, HttpClientModule } from '@angular/common/http';
 import { User } from '../servers/interfaces/client.interface';
+import { AuthResponse } from '../servers/interfaces/token.interface';
+import { CookieService } from 'ngx-cookie-service';
 
 
 @Injectable({
@@ -11,7 +13,7 @@ import { User } from '../servers/interfaces/client.interface';
 
 export class AuthService {
 
-  constructor(private userService: UsersService,private http :HttpClient) { }
+  constructor(private userService: UsersService,private http :HttpClient,private cookies : CookieService) { }
   loggedIn = false;
 
 
@@ -32,7 +34,10 @@ export class AuthService {
     // return promise;
     return localStorage.getItem('authenticated')==='true'
   }
- 
+
+  cookieOptions={
+    headers : new HttpHeaders({ 'Autentification': 'Ber '+'' })
+  } 
   login(email: string, password: string):Observable<boolean>{
     //Recuperamos el usuario y comprobamos que la contraseña sea correcta
   //  return this.userService.getUserByEmail(email)
@@ -50,19 +55,16 @@ export class AuthService {
   //   })))
     
 
-    return this.http.post<string>("http://localhost:8000/auth/login",{"email":email,"password":password},this.httpOptions)
-    .pipe( switchMap((resp=> {
+    return this.http.post<AuthResponse>("http://localhost:3000/jwt",{"jwt": ""},this.cookieOptions)
+    .pipe( switchMap(token=> {
+      localStorage.setItem('token', token.access_token);
       
-      if (resp){
-        localStorage.setItem('authenticated', 'true');
-        return of(true)
-      }
-      else{
-        localStorage.setItem('authenticated', 'false');
-        return of(false)
-      }
-
-    })))
+      return of(true);  
+    }),catchError(error => {
+      localStorage.removeItem('token');
+      return of(false)
+    })
+    )
     
 
     // .subscribe({
