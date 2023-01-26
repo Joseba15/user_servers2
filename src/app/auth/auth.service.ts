@@ -32,12 +32,22 @@ export class AuthService {
     //   }
     // );
     // return promise;
-    return localStorage.getItem('authenticated')==='true'
+    const httpHeaders={
+      headers: new HttpHeaders({ 'Authorization': `Bearer ${localStorage.getItem("token")}` })
+    }
+    return  this.http.get<any>('http://localhost:8000/jwt', httpHeaders)
+    .pipe(switchMap(resp =>{
+      
+      return of(true);
+
+    }), catchError(error =>{
+      return of(false)
+    })
+    )
+
   }
 
-  cookieOptions={
-    headers : new HttpHeaders({ 'Autentification': 'Ber '+'' })
-  } 
+  
   login(email: string, password: string):Observable<boolean>{
     //Recuperamos el usuario y comprobamos que la contraseña sea correcta
   //  return this.userService.getUserByEmail(email)
@@ -55,7 +65,7 @@ export class AuthService {
   //   })))
     
 
-    return this.http.post<AuthResponse>("http://localhost:3000/jwt",{"jwt": ""},this.cookieOptions)
+    return this.http.post<AuthResponse>("http://localhost:8000/auth/login", {'email':email, 'password':password}, this.httpOptions)
     .pipe( switchMap(token=> {
       localStorage.setItem('token', token.access_token);
       
@@ -94,4 +104,5 @@ export class AuthService {
     localStorage.setItem('authenticated', 'false');
     localStorage.removeItem('rol');
   }
+  
 }
